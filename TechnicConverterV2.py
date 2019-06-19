@@ -1,5 +1,5 @@
 '''
-Script to Download and convert Technic launcher modpacks to be Multimc compatible
+Script to Download and convert Technic launcher modpacks to be Curse compatible*
 by RedstoneLP2
 '''
 
