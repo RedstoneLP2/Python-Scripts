@@ -58,7 +58,7 @@ with tempfile.TemporaryDirectory() as tempDir:
 
 	userurl = input('Enter Pack API URL: ')
 	apiurl = userurl + "?build=407"
-	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0"})
+	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"})
 	packinfo = urllib.request.urlopen(req).read()
 	pinf = json.loads(packinfo)
 	mcver = pinf["minecraft"]
@@ -74,7 +74,7 @@ with tempfile.TemporaryDirectory() as tempDir:
 		packver = pinf["version"]
 		pname = pinf["name"]
 		sopackurl = soapiurl+"modpack/"+pname+"/"+packver
-		req = urllib.request.Request(sopackurl, headers={'User-Agent' : "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0"})
+		req = urllib.request.Request(sopackurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"})
 		soinf = urllib.request.urlopen(req).read()
 		painf = json.loads(soinf)
 		mcver = painf["minecraft"]
