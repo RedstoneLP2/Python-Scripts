@@ -18,7 +18,7 @@ def files(path):
         if os.path.isfile(os.path.join(path, file)):
             yield file
 
-def download(url, filename):
+def download(url, filename): #fancy download
     with open(filename, 'wb') as f:
         response = requests.get(url, stream=True)
         total = response.headers.get('content-length')
@@ -36,7 +36,7 @@ def download(url, filename):
                 sys.stdout.flush()
     sys.stdout.write('\n')
 
-def zipfolder(foldername, target_dir):            
+def zipfolder(foldername, target_dir): #def for zipping folders
     zipobj = zipfile.ZipFile(foldername + '.zip', 'w', zipfile.ZIP_DEFLATED)
     rootlen = len(target_dir) + 1
     for base, dirs, files in os.walk(target_dir):
@@ -44,7 +44,7 @@ def zipfolder(foldername, target_dir):
             fn = os.path.join(base, file)
             zipobj.write(fn, fn[rootlen:])
 
-with tempfile.TemporaryDirectory() as tempDir:
+with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	packDir = os.path.join(tempDir, "modpack")
 	zipDir = os.path.join(tempDir, "zipdir")
 	modpackjar = os.path.join(tempDir, "bin", "modpack.jar")
@@ -55,7 +55,7 @@ with tempfile.TemporaryDirectory() as tempDir:
 
 	userurl = input('Enter Pack API URL: ')
 	apiurl = userurl + "?build=407"
-	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"})
+	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"}) #tell the api you're techniclauncher
 	packinfo = urllib.request.urlopen(req).read()
 	pinf = json.loads(packinfo)
 	mcver = pinf["minecraft"]
@@ -67,18 +67,22 @@ with tempfile.TemporaryDirectory() as tempDir:
 		solder = True
 		soapiurl = pinf["solder"]
 
-	if solder:
+	if solder: # if pack is solder
 		pname = pinf["name"]
+			# connect to solder to find recommended version
 		soinfourl = soapiurl+"modpack/"+pname
 		req = urllib.request.Request(soinfourl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"})
 		sopackinf = urllib.request.urlopen(req).read()
 		sopackinfjson = json.loads(sopackinf)
 		packver = sopackinfjson["recommended"]
+
+			# connect to solder to get modlist w urls
 		sopackurl = soapiurl+"modpack/"+pname+"/"+packver
 		req = urllib.request.Request(sopackurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"})
 		soinf = urllib.request.urlopen(req).read()
 		painf = json.loads(soinf)
 		mcver = painf["minecraft"]
+			# Download mods
 		for l in painf["mods"]:
 			mod = l["url"]
 			filename = urlparse(mod)
@@ -87,19 +91,20 @@ with tempfile.TemporaryDirectory() as tempDir:
 			filename = os.path.join(zipDir, filename)
 			print(filename)
 			download(mod, filename)
-	else:
+	
+	else: # else download modpack.zip
 		zname = os.path.join(zipDir, "modpack.zip")
 		download(zipurl, zname)
-	
+		# extract all files and delete them
 	for file in files(zipDir):
 		filepath = os.path.join(zipDir, file)
 		zipfile.ZipFile(filepath, "r").extractall(zipDir)
 		os.remove(filepath)
 	
-	shutil.move(binDir, tempDir)
+	shutil.move(binDir, tempDir) # move bin somewhere else
 
 
-	try:
+	try: # try to extract version.json from modpack.jar
 		zipfile.ZipFile(modpackjar, "r").extract("version.json", os.path.join(tempDir, "bin"))
 		forge = True
 		pass
@@ -108,7 +113,7 @@ with tempfile.TemporaryDirectory() as tempDir:
 		forge = False
 		pass
 
-	if forge:
+	if forge: # if version.json is found use curse system
 		overrides = os.path.join(packDir, "overrides")
 		os.mkdir(overrides)	
 		manifestFile = os.path.join(packDir, "manifest.json")
@@ -130,7 +135,7 @@ with tempfile.TemporaryDirectory() as tempDir:
 		for dir in os.listdir(zipDir):
 			shutil.move(os.path.join(zipDir, dir), overrides)
 
-	else:
+	else: # else use multimc system to keep modpack.jar (usefull for older minecraft versions [should also work with non-forge modloaders])
 
 		mmcFile = os.path.join(pDir, "mmc-pack.json")
 		jarmodDir = os.path.join(pDir, "jarmods")
@@ -193,14 +198,14 @@ with tempfile.TemporaryDirectory() as tempDir:
 
 		mmcJson = json.loads(mmcData)
 
-		with open(mmcFile, "w") as mcJson:
+		with open(mmcFile, "w") as mcJson: # dump mmcjson in mmc-pack.json
 			json.dump(mmcJson, mcJson)
 
-		with open(patchFile, "w") as PatchF:
+		with open(patchFile, "w") as PatchF: # dump patchjson in patch.json
 			json.dump(patchJson, PatchF)
 
-		with open(os.path.join(pDir,"instance.cfg"), "w+") as instanceFile:
+		with open(os.path.join(pDir,"instance.cfg"), "w+") as instanceFile: # write instancecfg in instance.cfg
 			instanceFile.write(instancecfg)
 			instanceFile.close()
 
-	zipfolder(pinf["displayName"].replace(" ", "_"), packDir)
+	zipfolder(pinf["displayName"].replace(" ", "_"), packDir) # zip everything up
