@@ -76,7 +76,7 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 		sopackinfjson = json.loads(sopackinf)
 		packver = sopackinfjson["recommended"]
 
-			# connect to solder to get modlist w urls
+			# connect to solder to get modlist w/ urls
 		sopackurl = soapiurl+"modpack/"+pname+"/"+packver
 		req = urllib.request.Request(sopackurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"})
 		soinf = urllib.request.urlopen(req).read()
