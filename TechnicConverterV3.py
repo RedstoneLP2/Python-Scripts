@@ -88,8 +88,9 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 			filename = urlparse(mod)
 			filename = os.path.basename(str(filename))
 			filename = filename.replace("', params='', query='', fragment='')", "")
+			file = os.path.join(zipDir, filename)
 			print(filename)
-			download(mod, filename)
+			download(mod, file)
 	
 	else: # else download modpack.zip
 		zname = os.path.join(zipDir, "modpack.zip")
@@ -103,55 +104,22 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	shutil.move(binDir, tempDir) # move bin somewhere else
 
 
-	try: # try to extract version.json from modpack.jar
-		zipfile.ZipFile(modpackjar, "r").extract("version.json", os.path.join(tempDir, "bin"))
-		forge = True
-		pass
-	except KeyError as e:
-		print("Forge not found, using modpack.jar as jarmod (may not work correctly)")
-		forge = False
-		pass
+	mmcFile = os.path.join(pDir, "mmc-pack.json")
+	jarmodDir = os.path.join(pDir, "jarmods")
+	patches = os.path.join(pDir, "patches")
+	patchFile = os.path.join(patches, "org.multimc.jarmod.6d6f647061636b.json")
+	minecraft = os.path.join(pDir, "minecraft")
 
-	if forge: # if version.json is found use curse system
-		overrides = os.path.join(packDir, "overrides")
-		os.mkdir(overrides)	
-		manifestFile = os.path.join(packDir, "manifest.json")
-		versionJson = os.path.join(tempDir, "bin", "version.json")
+	os.mkdir(minecraft)
+	os.mkdir(patches)
+	os.mkdir(jarmodDir)
 
-		with open(versionJson) as versionjson:
-			data = json.load(versionjson)
-		forgeHeader = data["libraries"][0]["name"]
-		forgeHeader = forgeHeader.replace("net.minecraftforge:forge:", "")
-		forgever = forgeHeader.replace(mcver, "")
+	shutil.move(modpackjar, jarmodDir)
 
-		if forgever[-1:] == "-":
-			forgever = forgever[:-1]
-		manifestData = '{"minecraft": {"version": "'+mcver+'", "modLoaders": [{"id": "forge'+forgever+'", "primary": true}]}, "manifestType": "minecraftModpack", "manifestVersion": 1, "files": [], "overrides": "overrides"}'
-		manifestJson = json.loads(manifestData)
-		with open(manifestFile, "w") as maniJson:
-			json.dump(manifestJson, maniJson)
-
-		for dir in os.listdir(zipDir):
-			shutil.move(os.path.join(zipDir, dir), overrides)
-
-	else: # else use multimc system to keep modpack.jar (usefull for older minecraft versions [should also work with non-forge modloaders])
-
-		mmcFile = os.path.join(pDir, "mmc-pack.json")
-		jarmodDir = os.path.join(pDir, "jarmods")
-		patches = os.path.join(pDir, "patches")
-		patchFile = os.path.join(patches, "org.multimc.jarmod.6d6f647061636b.json")
-		minecraft = os.path.join(pDir, "minecraft")
-
-		os.mkdir(minecraft)
-		os.mkdir(patches)
-		os.mkdir(jarmodDir)
-
-		shutil.move(modpackjar, jarmodDir)
-
-		for dir in os.listdir(zipDir):
-			shutil.move(os.path.join(zipDir, dir), minecraft)
+	for dir in os.listdir(zipDir):
+		shutil.move(os.path.join(zipDir, dir), minecraft)
 		
-		mmcData = '''{
+	mmcData = '''{
     "components": [
         {
             "cachedName": "Minecraft",
@@ -174,12 +142,12 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
     "formatVersion": 1
 }'''
 
-		instancecfg = '''InstanceType=OneSix
+	instancecfg = '''InstanceType=OneSix
 	MCLaunchMethod=LauncherPart
 	name='''+pinf["displayName"]+'''
 	notes='''+pinf["description"]
 
-		patchData = '''{
+	patchData = '''{
     "formatVersion": 1,
     "jarMods": [
         {
@@ -193,18 +161,18 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
     "uid": "org.multimc.jarmod.6d6f647061636b"
 }'''
 
-		patchJson = json.loads(patchData)
+	patchJson = json.loads(patchData)
 
-		mmcJson = json.loads(mmcData)
+	mmcJson = json.loads(mmcData)
 
-		with open(mmcFile, "w") as mcJson: # dump mmcjson in mmc-pack.json
-			json.dump(mmcJson, mcJson)
+	with open(mmcFile, "w") as mcJson: # dump mmcjson in mmc-pack.json
+		json.dump(mmcJson, mcJson)
 
-		with open(patchFile, "w") as PatchF: # dump patchjson in patch.json
-			json.dump(patchJson, PatchF)
+	with open(patchFile, "w") as PatchF: # dump patchjson in patch.json
+		json.dump(patchJson, PatchF)
 
-		with open(os.path.join(pDir,"instance.cfg"), "w+") as instanceFile: # write instancecfg in instance.cfg
-			instanceFile.write(instancecfg)
-			instanceFile.close()
+	with open(os.path.join(pDir,"instance.cfg"), "w+") as instanceFile: # write instancecfg in instance.cfg
+		instanceFile.write(instancecfg)
+		instanceFile.close()
 
 	zipfolder(pinf["displayName"].replace(" ", "_"), packDir) # zip everything up

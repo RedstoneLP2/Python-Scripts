@@ -83,7 +83,6 @@ with tempfile.TemporaryDirectory() as tempDir:
 			filename = urlparse(mod)
 			filename = os.path.basename(str(filename))
 			filename = filename.replace("', params='', query='', fragment='')", "")
-			filename = os.path.join(zipDir, filename)
 			print(filename)
 			download(mod, filename)
 	else:
