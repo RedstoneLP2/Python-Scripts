@@ -59,7 +59,6 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	packinfo = urllib.request.urlopen(req).read()
 	pinf = json.loads(packinfo)
 	mcver = pinf["minecraft"]
-
 	if pinf["solder"] is None:
 		zipurl = pinf["url"]
 		solder = False
