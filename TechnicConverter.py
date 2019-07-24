@@ -14,40 +14,43 @@ import sys
 from urllib.parse import urlparse
 
 def files(path):
-    for file in os.listdir(path):
-        if os.path.isfile(os.path.join(path, file)):
-            yield file
+	for file in os.listdir(path):
+		if os.path.isfile(os.path.join(path, file)):
+			yield file
 
 def download(url, filename): #fancy download
-    with open(filename, 'wb') as f:
-        response = requests.get(url, stream=True)
-        total = response.headers.get('content-length')
+	with open(filename, 'wb') as f:
+		response = requests.get(url, stream=True)
+		if response.status_code == 404:
+			print("Error 404 while donwloading: "+ url)
+			sys.exit()
+		total = response.headers.get('content-length')
 
-        if total is None:
-            f.write(response.content)
-        else:
-            downloaded = 0
-            total = int(total)
-            for data in response.iter_content(chunk_size=max(int(total/1000), 1024*1024)):
-                downloaded += len(data)
-                f.write(data)
-                done = int(50*downloaded/total)
-                sys.stdout.write('\r[{}{}]'.format('█' * done, '.' * (50-done)))
-                sys.stdout.flush()
-    sys.stdout.write('\n')
+		if total is None:
+			f.write(response.content)
+		else:
+			downloaded = 0
+			total = int(total)
+			for data in response.iter_content(chunk_size=max(int(total/1000), 1024*1024)):
+				downloaded += len(data)
+				f.write(data)
+				done = int(50*downloaded/total)
+				sys.stdout.write('\r[{}{}]'.format('█' * done, '.' * (50-done)))
+				sys.stdout.flush()
+	sys.stdout.write('\n')
 
 def zipfolder(foldername, target_dir): #def for zipping folders
-    zipobj = zipfile.ZipFile(foldername + '.zip', 'w', zipfile.ZIP_DEFLATED)
-    rootlen = len(target_dir) + 1
-    for base, dirs, files in os.walk(target_dir):
-        for file in files:
-            fn = os.path.join(base, file)
-            zipobj.write(fn, fn[rootlen:])
+	zipobj = zipfile.ZipFile(foldername + '.zip', 'w', zipfile.ZIP_DEFLATED)
+	rootlen = len(target_dir) + 1
+	for base, dirs, files in os.walk(target_dir):
+		for file in files:
+			fn = os.path.join(base, file)
+			zipobj.write(fn, fn[rootlen:])
 
 with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	packDir = os.path.join(tempDir, "modpack")
 	zipDir = os.path.join(tempDir, "zipdir")
-	modpackjar = os.path.join(tempDir, "bin", "modpack.jar")
+	modpackjar = os.path.join(tempDir, "bin", "Modpack.jar")
 	binDir = os.path.join(zipDir, "bin")
 	pDir = os.path.join(packDir, "modpack")
 	os.makedirs(pDir)
@@ -102,7 +105,11 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	
 	shutil.move(binDir, tempDir) # move bin somewhere else
 
-	if os.path.exists(modpackjar):
+	if os.path.exists(modpackjar) or os.path.exists(os.path.join(modpackjar.lower())):
+		if os.path.exists(modpackjar):
+			pass
+		else:
+			modpackjar=modpackjar.lower()
 		try: # try to extract version.json from modpack.jar
 			zipfile.ZipFile(modpackjar, "r").extract("version.json", os.path.join(tempDir, "bin"))
 			forge = True
@@ -118,13 +125,15 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 		if ("fabric" in versionjson["libraries"][0]["name"]):
 			fabric = True
 			forge = False
-		elif ("forge" in versionjson["libraries"][0]["name"]):
+		else:
 			forge = True
 			fabric = False
+	else:
+		forge = False
+		fabric = False
 
 
-
-	if forge: # if version.json is found use curse system
+	if forge:
 		versionJson = os.path.join(tempDir, "bin", "version.json")
 
 		with open(versionJson) as versionjson:
@@ -163,108 +172,108 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 
 	if not forge and not fabric:
 		mmcData = '''{
-    "components": [
-        {
-            "cachedName": "Minecraft",
-            "cachedRequires": [
-                {
-                    "suggests": "2.9.4-nightly-20150209",
-                    "uid": "org.lwjgl"
-                }
-            ],
-            "cachedVersion": "'''+mcver+'''",
-            "important": true,
-            "uid": "net.minecraft",
-            "version": "'''+mcver+'''"
-        },
-        {
-            "cachedName": "modpack.jar",
-            "uid": "org.multimc.jarmod.6d6f647061636b"
-        }
-    ],
-    "formatVersion": 1
+	"components": [
+		{
+			"cachedName": "Minecraft",
+			"cachedRequires": [
+				{
+					"suggests": "2.9.4-nightly-20150209",
+					"uid": "org.lwjgl"
+				}
+			],
+			"cachedVersion": "'''+mcver+'''",
+			"important": true,
+			"uid": "net.minecraft",
+			"version": "'''+mcver+'''"
+		},
+		{
+			"cachedName": "modpack.jar",
+			"uid": "org.multimc.jarmod.6d6f647061636b"
+		}
+	],
+	"formatVersion": 1
 }'''
 	elif forge and not fabric:
 		mmcData = '''{
-    "components": [
-        {
-            "cachedName": "Minecraft",
-            "cachedRequires": [
-                {
-                    "suggests": "2.9.4-nightly-20150209",
-                    "uid": "org.lwjgl"
-                }
-            ],
-            "cachedVersion": "'''+mcver+'''",
-            "important": true,
-            "uid": "net.minecraft",
-            "version": "'''+mcver+'''"
-        },
-        {
-            "cachedName": "modpack.jar",
-            "uid": "org.multimc.jarmod.6d6f647061636b"
-        },
-        {
-            "cachedName": "Forge",
-            "cachedRequires": [
-                {
-                    "equals": "'''+mcver+'''",
-                    "uid": "net.minecraft"
-                }
-            ],
-            "cachedVersion": "'''+forgever+'''",
-            "uid": "net.minecraftforge",
-            "version": "'''+forgever+'''"
-        }
-    ],
-    "formatVersion": 1
+	"components": [
+		{
+			"cachedName": "Minecraft",
+			"cachedRequires": [
+				{
+					"suggests": "2.9.4-nightly-20150209",
+					"uid": "org.lwjgl"
+				}
+			],
+			"cachedVersion": "'''+mcver+'''",
+			"important": true,
+			"uid": "net.minecraft",
+			"version": "'''+mcver+'''"
+		},
+		{
+			"cachedName": "modpack.jar",
+			"uid": "org.multimc.jarmod.6d6f647061636b"
+		},
+		{
+			"cachedName": "Forge",
+			"cachedRequires": [
+				{
+					"equals": "'''+mcver+'''",
+					"uid": "net.minecraft"
+				}
+			],
+			"cachedVersion": "'''+forgever+'''",
+			"uid": "net.minecraftforge",
+			"version": "'''+forgever+'''"
+		}
+	],
+	"formatVersion": 1
 }'''
 	elif not forge and fabric:
 		mmcData = '''{
-    "components": [
-        {
-            "cachedName": "Minecraft",
-            "cachedRequires": [
-                {
-                    "equals": "3.2.2",
-                    "suggests": "3.2.2",
-                    "uid": "org.lwjgl3"
-                }
-            ],
-            "cachedVersion": "'''+mcver+'''",
-            "important": true,
-            "uid": "net.minecraft",
-            "version": "'''+mcver+'''"
-        },
-        {
-            "cachedName": "Intermediary Mappings",
-            "cachedRequires": [
-                {
-                    "equals": "'''+mcver+'''",
-                    "uid": "net.minecraft"
-                }
-            ],
-            "cachedVersion": "'''+mcver+'''",
-            "cachedVolatile": true,
-            "dependencyOnly": true,
-            "uid": "net.fabricmc.intermediary",
-            "version": "'''+mcver+'''"
-        },
+	"components": [
+		{
+			"cachedName": "Minecraft",
+			"cachedRequires": [
+				{
+					"equals": "3.2.2",
+					"suggests": "3.2.2",
+					"uid": "org.lwjgl3"
+				}
+			],
+			"cachedVersion": "'''+mcver+'''",
+			"important": true,
+			"uid": "net.minecraft",
+			"version": "'''+mcver+'''"
+		},
+		{
+			"cachedName": "Intermediary Mappings",
+			"cachedRequires": [
+				{
+					"equals": "'''+mcver+'''",
+					"uid": "net.minecraft"
+				}
+			],
+			"cachedVersion": "'''+mcver+'''",
+			"cachedVolatile": true,
+			"dependencyOnly": true,
+			"uid": "net.fabricmc.intermediary",
+			"version": "'''+mcver+'''"
+		},
 
 
-        {
-            "cachedName": "Fabric Loader",
-            "cachedRequires": [
-                {
-                    "uid": "net.fabricmc.intermediary"
-                }
-            ],
-            "cachedVersion": "'''+fabricver+'''",
-            "uid": "net.fabricmc.fabric-loader",
-            "version": "'''+fabricver+'''"
-        }
-    ],
-    "formatVersion": 1
+		{
+			"cachedName": "Fabric Loader",
+			"cachedRequires": [
+				{
+					"uid": "net.fabricmc.intermediary"
+				}
+			],
+			"cachedVersion": "'''+fabricver+'''",
+			"uid": "net.fabricmc.fabric-loader",
+			"version": "'''+fabricver+'''"
+		}
+	],
+	"formatVersion": 1
 }'''
 
 	instancecfg = '''InstanceType=OneSix
@@ -276,17 +285,17 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	if os.path.exists(modpackjar):
 		shutil.move(modpackjar, jarmodDir)
 		patchData = '''{
-    "formatVersion": 1,
-    "jarMods": [
-        {
-            "MMC-displayname": "modpack.jar",
-            "MMC-filename": "modpack.jar",
-            "MMC-hint": "local",
-            "name": "org.multimc.jarmods:6d6f647061636b:1"
-        }
-    ],
-    "name": "6d6f647061636b.jar",
-    "uid": "org.multimc.jarmod.6d6f647061636b"
+	"formatVersion": 1,
+	"jarMods": [
+		{
+			"MMC-displayname": "'''+os.path.basename(modpackjar)+'''",
+			"MMC-filename": "'''+os.path.basename(modpackjar)+'''",
+			"MMC-hint": "local",
+			"name": "org.multimc.jarmods:6d6f647061636b:1"
+		}
+	],
+	"name": "6d6f647061636b.jar",
+	"uid": "org.multimc.jarmod.6d6f647061636b"
 }'''
 	
 		patchJson = json.loads(patchData)
