@@ -103,14 +103,27 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	
 	shutil.move(binDir, tempDir) # move bin somewhere else
 
-	try: # try to extract version.json from modpack.jar
-		zipfile.ZipFile(modpackjar, "r").extract("version.json", os.path.join(tempDir, "bin"))
-		forge = True
-		pass
-	except KeyError as e:
-		print("Forge not found, using modpack.jar as jarmod (may not work correctly)")
-		forge = False
-		pass
+	if os.path.exists(modpackjar):
+		try: # try to extract version.json from modpack.jar
+			zipfile.ZipFile(modpackjar, "r").extract("version.json", os.path.join(tempDir, "bin"))
+			forge = True
+			fabric = False
+			pass
+		except KeyError as e:
+			print("Forge not found, using modpack.jar as jarmod (may not work correctly)")
+			forge = False
+			fabric = False
+			pass
+	elif os.path.exists(os.path.join(tempDir, "bin", "version.json")):
+		versionjson = json.load(open(os.path.join(tempDir, "bin", "version.json")))
+		if ("fabric" in versionjson["libraries"][0]["name"]):
+			fabric = True
+			forge = False
+		elif ("forge" in versionjson["libraries"][0]["name"]):
+			forge = True
+			fabric = False
+
+
 
 	if forge: # if version.json is found use curse system
 		versionJson = os.path.join(tempDir, "bin", "version.json")
@@ -123,7 +136,10 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 		forgever = forgeHeader.replace(mcver, "")
 
 		forgever = forgever.replace("-", "")
-		
+	elif fabric:
+		fabricHeader = versionjson["libraries"][0]["name"]
+		fabricver = fabricHeader.replace("net.fabricmc:fabric-loader:", "")
+
 	mmcFile = os.path.join(pDir, "mmc-pack.json")
 	jarmodDir = os.path.join(pDir, "jarmods")
 	patches = os.path.join(pDir, "patches")
@@ -134,17 +150,19 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	os.mkdir(patches)
 	os.mkdir(jarmodDir)
 
-	shutil.move(modpackjar, jarmodDir)
+	
 
 	for dir in os.listdir(zipDir):
 		shutil.move(os.path.join(zipDir, dir), minecraft)
 
 	iconUrl=pinf["icon"]["url"]
+	if iconUrl == "":
+		iconUrl = "https://theme.zdassets.com/theme_assets/646263/b26a053b1a803ec41d3aa316adb534b82442757f.png"
 	iconName=iconUrl[iconUrl.rfind("/")+1:].split("?", 1)[0]
 	print(iconName)
 	download(iconUrl, os.path.join(pDir, iconName))
 
-	if not forge:
+	if not forge and not fabric:
 		mmcData = '''{
     "components": [
         {
@@ -167,7 +185,7 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
     ],
     "formatVersion": 1
 }'''
-	else:
+	elif forge and not fabric:
 		mmcData = '''{
     "components": [
         {
@@ -202,6 +220,53 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
     ],
     "formatVersion": 1
 }'''
+	elif not forge and fabric:
+		mmcData = '''{
+    "components": [
+        {
+            "cachedName": "Minecraft",
+            "cachedRequires": [
+                {
+                    "equals": "3.2.2",
+                    "suggests": "3.2.2",
+                    "uid": "org.lwjgl3"
+                }
+            ],
+            "cachedVersion": "'''+mcver+'''",
+            "important": true,
+            "uid": "net.minecraft",
+            "version": "'''+mcver+'''"
+        },
+        {
+            "cachedName": "Intermediary Mappings",
+            "cachedRequires": [
+                {
+                    "equals": "'''+mcver+'''",
+                    "uid": "net.minecraft"
+                }
+            ],
+            "cachedVersion": "'''+mcver+'''",
+            "cachedVolatile": true,
+            "dependencyOnly": true,
+            "uid": "net.fabricmc.intermediary",
+            "version": "'''+mcver+'''"
+        },
+
+
+        {
+            "cachedName": "Fabric Loader",
+            "cachedRequires": [
+                {
+                    "uid": "net.fabricmc.intermediary"
+                }
+            ],
+            "cachedVersion": "'''+fabricver+'''",
+            "uid": "net.fabricmc.fabric-loader",
+            "version": "'''+fabricver+'''"
+        }
+    ],
+    "formatVersion": 1
+}'''
 
 	instancecfg = '''InstanceType=OneSix
 	MCLaunchMethod=LauncherPart
@@ -209,7 +274,9 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	notes='''+pinf["description"]+'''
 	iconKey='''+iconName.replace(".png", "")
 
-	patchData = '''{
+	if os.path.exists(modpackjar):
+		shutil.move(modpackjar, jarmodDir)
+		patchData = '''{
     "formatVersion": 1,
     "jarMods": [
         {
@@ -223,20 +290,18 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
     "uid": "org.multimc.jarmod.6d6f647061636b"
 }'''
 	
-	
-	patchJson = json.loads(patchData)
+		patchJson = json.loads(patchData)
+		with open(patchFile, "w") as PatchF: # dump patchjson in patch.json
+			json.dump(patchJson, PatchF)
 
 	mmcJson = json.loads(mmcData)
 
 	with open(mmcFile, "w") as mcJson: # dump mmcjson in mmc-pack.json
 		json.dump(mmcJson, mcJson)
 
-	with open(patchFile, "w") as PatchF: # dump patchjson in patch.json
-		json.dump(patchJson, PatchF)
-
 	with open(os.path.join(pDir,"instance.cfg"), "w+") as instanceFile: # write instancecfg in instance.cfg
 		instanceFile.write(instancecfg)
 		instanceFile.close()
 
-	zipfolder(pinf["displayName"].replace(" ", "_"), packDir) # zip everything up
-	print("Output File: "+pinf["displayName"].replace(" ", "_")+".zip")
+	zipfolder(pinf["displayName"].replace(" ", "_").replace("/", "").replace("\\", ""), packDir) # zip everything up
+	print("Output File: "+pinf["displayName"].replace(" ", "_").replace("/", "").replace("\\", "")+".zip")
