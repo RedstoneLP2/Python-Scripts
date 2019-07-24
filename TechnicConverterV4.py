@@ -241,3 +241,4 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 		instanceFile.close()
 
 	zipfolder(pinf["displayName"].replace(" ", "_"), packDir) # zip everything up
+	print(pinf["displayName"].replace(" ", "_"))
