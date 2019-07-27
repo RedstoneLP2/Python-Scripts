@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 '''
 Script to Download and convert Technic launcher modpacks to be more Multimc compatible*
 by RedstoneLP2
