@@ -63,6 +63,8 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	packinfo = urllib.request.urlopen(req).read()
 	pinf = json.loads(packinfo)
 	mcver = pinf["minecraft"]
+	if ("1.13."or"1.14.") in mcver:
+		print("Forge 1.13 and above not supported by Multimc")
 	if pinf["solder"] is None:
 		zipurl = pinf["url"]
 		solder = False
