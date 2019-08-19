@@ -59,12 +59,12 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 
 	userurl = input('Enter Pack API URL: ')
 	apiurl = userurl + "?build=407"
-	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"}) #tell the api you're techniclauncher
+	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"}) # tell the api you're techniclauncher
 	packinfo = urllib.request.urlopen(req).read()
 	pinf = json.loads(packinfo)
 	mcver = pinf["minecraft"]
-	if ("1.13."or"1.14.") in mcver:
-		print("Forge 1.13 and above not supported by Multimc")
+	if any(ver in mcver for ver in ("1.13.", "1.14.")):
+		print("1.13 and above modpacks using Forge may not work correctly") # a friendly reminder that forge 1.13 and up is not supported in multimc
 	if pinf["solder"] is None:
 		zipurl = pinf["url"]
 		solder = False
