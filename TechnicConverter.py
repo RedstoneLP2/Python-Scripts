@@ -40,6 +40,13 @@ def download(url, filename): #fancy download
 				sys.stdout.flush()
 	sys.stdout.write('\n')
 
+def apiparse(apiurl):
+	apiurl = apiurl + "?build=407"
+	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"}) # tell the api you're techniclauncher
+	packinfo = urllib.request.urlopen(req).read()
+	pinf = json.loads(packinfo)
+	return pinf
+
 def zipfolder(foldername, target_dir): #def for zipping folders
 	zipobj = zipfile.ZipFile(foldername + '.zip', 'w', zipfile.ZIP_DEFLATED)
 	rootlen = len(target_dir) + 1
@@ -48,31 +55,8 @@ def zipfolder(foldername, target_dir): #def for zipping folders
 			fn = os.path.join(base, file)
 			zipobj.write(fn, fn[rootlen:])
 
-with tempfile.TemporaryDirectory() as tempDir: #create tempdir
-	packDir = os.path.join(tempDir, "modpack")
-	zipDir = os.path.join(tempDir, "zipdir")
-	modpackjar = os.path.join(tempDir, "bin", "Modpack.jar")
-	binDir = os.path.join(zipDir, "bin")
-	pDir = os.path.join(packDir, "modpack")
-	os.makedirs(pDir)
-	os.mkdir(zipDir)
-
-	userurl = input('Enter Pack API URL: ')
-	apiurl = userurl + "?build=407"
-	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"}) # tell the api you're techniclauncher
-	packinfo = urllib.request.urlopen(req).read()
-	pinf = json.loads(packinfo)
-	mcver = pinf["minecraft"]
-	if any(ver in mcver for ver in ("1.13.", "1.14.")):
-		print("1.13 and above modpacks using Forge may not work correctly") # a friendly reminder that forge 1.13 and up is not supported in multimc
-	if pinf["solder"] is None:
-		zipurl = pinf["url"]
-		solder = False
-	else:
-		solder = True
+def solderdl(pinf, zipDir):
 		soapiurl = pinf["solder"]
-
-	if solder: # if pack is solder
 		pname = pinf["name"]
 			# connect to solder to find recommended version
 		soinfourl = soapiurl+"modpack/"+pname
@@ -96,72 +80,99 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 			file = os.path.join(zipDir, filename)
 			print(filename)
 			download(mod, file)
-	
-	else: # else download modpack.zip
-		zname = os.path.join(zipDir, "modpack.zip")
-		download(zipurl, zname)
-		# extract all files and delete them
-	for file in files(zipDir):
-		filepath = os.path.join(zipDir, file)
-		zipfile.ZipFile(filepath, "r").extractall(zipDir)
-		os.remove(filepath)
-	
-	shutil.move(binDir, tempDir) # move bin somewhere else
 
-	if os.path.exists(modpackjar) or os.path.exists(os.path.join(modpackjar.lower())):
-		if os.path.exists(modpackjar):
-			pass
-		else:
-			modpackjar=modpackjar.lower()
+def detectloader(tempDir):
+	modpackjar = os.path.join(tempDir, "bin", "Modpack.jar")
+	if os.path.exists(modpackjar):
+		pass
+	elif os.path.exists(modpackjar.lower()):
+		modpackjar = modpackjar.lower()
+	else:
+		modpackjar = None
+	if modpackjar is not None:
 		try: # try to extract version.json from modpack.jar
-			zipfile.ZipFile(modpackjar, "r").extract("version.json", os.path.join(tempDir, "bin"))
+			zipfile.ZipFile(modpackjar, "r").extract("version.json", os.path.join(tempDir, "bin")) # assuming only forge has version.json in modpack.jar
+			versionjson = json.load(open(os.path.join(tempDir,"bin","version.json")))
 			forge = True
 			fabric = False
 			pass
 		except KeyError as e:
-			print("Forge not found, using modpack.jar as jarmod (may not work correctly)")
+			print("version.json not found, using modpack.jar as jarmod (may not work correctly)")
 			forge = False
 			fabric = False
 			pass
 	elif os.path.exists(os.path.join(tempDir, "bin", "version.json")):
 		versionjson = json.load(open(os.path.join(tempDir, "bin", "version.json")))
 		if ("fabric" in versionjson["libraries"][0]["name"]):
-			fabric = True
 			forge = False
-		else:
+			fabric = True
+		elif ("forge" in versionjson["libraries"][0]["name"]):
 			forge = True
 			fabric = False
 	else:
 		forge = False
 		fabric = False
+	return forge, fabric, modpackjar, versionjson
+
+def getforgever(mcver, tempDir):
+	forgeHeader = versionjson["libraries"][0]["name"]
+	forgeHeader = forgeHeader.replace("net.minecraftforge:forge:", "")
+	forgeHeader = forgeHeader.replace("net.minecraftforge:minecraftforge:", "")
+	forgeHeader = forgeHeader.replace(mcver, "")
+	forgever = forgeHeader.replace("-", "")
+	return forgever
+
+def createpatchfile(pDir, modpackjar):
+	patches = os.path.join(pDir, "patches")
+	jarmodDir = os.path.join(pDir, "jarmods")
+	os.mkdir(jarmodDir)
+	os.mkdir(patches)
+	patchFile = os.path.join(patches, "org.multimc.jarmod.6d6f647061636b.json")
+	shutil.move(modpackjar, jarmodDir)
+	patchData = '''{"formatVersion": 1,"jarMods": [	{"MMC-displayname": "'''+os.path.basename(modpackjar)+'''","MMC-filename": "'''+os.path.basename(modpackjar)+'''","MMC-hint": "local","name": "org.multimc.jarmods:6d6f647061636b:1"}],"name": "6d6f647061636b.jar","uid": "org.multimc.jarmod.6d6f647061636b"}'''
+	patchJson = json.loads(patchData)
+	with open(patchFile, "w") as PatchF: # dump patchjson in patch.json
+		json.dump(patchJson, PatchF)
+
+with tempfile.TemporaryDirectory() as tempDir: #create tempDir
+	packDir = os.path.join(tempDir, "modpack")
+	zipDir = os.path.join(tempDir, "zipdir")
+	binDir = os.path.join(zipDir, "bin")
+	pDir = os.path.join(packDir, "modpack")
+	mmcFile = os.path.join(pDir, "mmc-pack.json")
+	minecraft = os.path.join(pDir, "minecraft")
+
+	os.makedirs(pDir)
+	os.mkdir(minecraft)
+	os.mkdir(zipDir)
+
+	userurl = input('Enter Pack API URL: ')
+	pinf = apiparse(userurl)
+	mcver = pinf["minecraft"]
+
+	if pinf["solder"] is None:
+		zipurl = pinf["url"]
+		zname = os.path.join(zipDir, "modpack.zip")
+		download(zipurl, zname)
+	else:
+		solderdl(pinf, zipDir)
+
+	for file in files(zipDir): # extract all files and delete them
+		filepath = os.path.join(zipDir, file)
+		zipfile.ZipFile(filepath, "r").extractall(zipDir)
+		os.remove(filepath)
+	
+	shutil.move(binDir, tempDir) # move bin somewhere else
+	forge, fabric, modpackjar, versionjson = detectloader(tempDir)
 
 
 	if forge:
-		versionJson = os.path.join(tempDir, "bin", "version.json")
-
-		with open(versionJson) as versionjson:
-			data = json.load(versionjson)
-		forgeHeader = data["libraries"][0]["name"]
-		forgeHeader = forgeHeader.replace("net.minecraftforge:forge:", "")
-		forgeHeader = forgeHeader.replace("net.minecraftforge:minecraftforge:", "")
-		forgever = forgeHeader.replace(mcver, "")
-
-		forgever = forgever.replace("-", "")
+		if any(ver in mcver for ver in ("1.13.", "1.14.")):
+			print("1.13 and above modpacks using Forge may not work correctly") # a friendly reminder that forge 1.13 and up is not supported in multimc
+		forgever = getforgever(mcver, tempDir)
 	elif fabric:
 		fabricHeader = versionjson["libraries"][0]["name"]
 		fabricver = fabricHeader.replace("net.fabricmc:fabric-loader:", "")
-
-	mmcFile = os.path.join(pDir, "mmc-pack.json")
-	jarmodDir = os.path.join(pDir, "jarmods")
-	patches = os.path.join(pDir, "patches")
-	patchFile = os.path.join(patches, "org.multimc.jarmod.6d6f647061636b.json")
-	minecraft = os.path.join(pDir, "minecraft")
-
-	os.mkdir(minecraft)
-	os.mkdir(patches)
-	os.mkdir(jarmodDir)
-
-	
 
 	for dir in os.listdir(zipDir):
 		shutil.move(os.path.join(zipDir, dir), minecraft)
@@ -173,111 +184,15 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	print(iconName)
 	download(iconUrl, os.path.join(pDir, iconName))
 
-	if not forge and not fabric:
-		mmcData = '''{
-	"components": [
-		{
-			"cachedName": "Minecraft",
-			"cachedRequires": [
-				{
-					"suggests": "2.9.4-nightly-20150209",
-					"uid": "org.lwjgl"
-				}
-			],
-			"cachedVersion": "'''+mcver+'''",
-			"important": true,
-			"uid": "net.minecraft",
-			"version": "'''+mcver+'''"
-		},
-		{
-			"cachedName": "modpack.jar",
-			"uid": "org.multimc.jarmod.6d6f647061636b"
-		}
-	],
-	"formatVersion": 1
-}'''
+	if modpackjar != None and not forge and not fabric:
+		createpatchfile(pDir, modpackjar)
+		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"},{"cachedName": "modpack.jar","uid": "org.multimc.jarmod.6d6f647061636b"}],"formatVersion": 1}'''
 	elif forge and not fabric:
-		mmcData = '''{
-	"components": [
-		{
-			"cachedName": "Minecraft",
-			"cachedRequires": [
-				{
-					"suggests": "2.9.4-nightly-20150209",
-					"uid": "org.lwjgl"
-				}
-			],
-			"cachedVersion": "'''+mcver+'''",
-			"important": true,
-			"uid": "net.minecraft",
-			"version": "'''+mcver+'''"
-		},
-		{
-			"cachedName": "modpack.jar",
-			"uid": "org.multimc.jarmod.6d6f647061636b"
-		},
-		{
-			"cachedName": "Forge",
-			"cachedRequires": [
-				{
-					"equals": "'''+mcver+'''",
-					"uid": "net.minecraft"
-				}
-			],
-			"cachedVersion": "'''+forgever+'''",
-			"uid": "net.minecraftforge",
-			"version": "'''+forgever+'''"
-		}
-	],
-	"formatVersion": 1
-}'''
+		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"},{"cachedName": "Forge","cachedRequires": [{"equals": "'''+mcver+'''","uid": "net.minecraft"}],"cachedVersion": "'''+forgever+'''","uid": "net.minecraftforge","version": "'''+forgever+'''"}],"formatVersion": 1}'''
 	elif not forge and fabric:
-		mmcData = '''{
-	"components": [
-		{
-			"cachedName": "Minecraft",
-			"cachedRequires": [
-				{
-					"equals": "3.2.2",
-					"suggests": "3.2.2",
-					"uid": "org.lwjgl3"
-				}
-			],
-			"cachedVersion": "'''+mcver+'''",
-			"important": true,
-			"uid": "net.minecraft",
-			"version": "'''+mcver+'''"
-		},
-		{
-			"cachedName": "Intermediary Mappings",
-			"cachedRequires": [
-				{
-					"equals": "'''+mcver+'''",
-					"uid": "net.minecraft"
-				}
-			],
-			"cachedVersion": "'''+mcver+'''",
-			"cachedVolatile": true,
-			"dependencyOnly": true,
-			"uid": "net.fabricmc.intermediary",
-			"version": "'''+mcver+'''"
-		},
-
-
-		{
-			"cachedName": "Fabric Loader",
-			"cachedRequires": [
-				{
-					"uid": "net.fabricmc.intermediary"
-				}
-			],
-			"cachedVersion": "'''+fabricver+'''",
-			"uid": "net.fabricmc.fabric-loader",
-			"version": "'''+fabricver+'''"
-		}
-	],
-	"formatVersion": 1
-}'''
+		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"},{"cachedName": "Intermediary Mappings","cachedRequires": [{"equals": "'''+mcver+'''","uid": "net.minecraft"}],"cachedVersion": "'''+mcver+'''","cachedVolatile": true,"dependencyOnly": true,"uid": "net.fabricmc.intermediary","version": "'''+mcver+'''"},{"cachedName": "Fabric Loader","cachedRequires": [{"uid": "net.fabricmc.intermediary"}],"cachedVersion": "'''+fabricver+'''","uid": "net.fabricmc.fabric-loader","version": "'''+fabricver+'''"}],"formatVersion": 1}'''
+	else:
+		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"}],"formatVersion": 1}'''
 
 	instancecfg = '''InstanceType=OneSix
 	MCLaunchMethod=LauncherPart
@@ -285,25 +200,6 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 	notes='''+pinf["description"]+'''
 	iconKey='''+iconName.replace(".png", "")
 
-	if os.path.exists(modpackjar):
-		shutil.move(modpackjar, jarmodDir)
-		patchData = '''{
-	"formatVersion": 1,
-	"jarMods": [
-		{
-			"MMC-displayname": "'''+os.path.basename(modpackjar)+'''",
-			"MMC-filename": "'''+os.path.basename(modpackjar)+'''",
-			"MMC-hint": "local",
-			"name": "org.multimc.jarmods:6d6f647061636b:1"
-		}
-	],
-	"name": "6d6f647061636b.jar",
-	"uid": "org.multimc.jarmod.6d6f647061636b"
-}'''
-	
-		patchJson = json.loads(patchData)
-		with open(patchFile, "w") as PatchF: # dump patchjson in patch.json
-			json.dump(patchJson, PatchF)
 
 	mmcJson = json.loads(mmcData)
 
