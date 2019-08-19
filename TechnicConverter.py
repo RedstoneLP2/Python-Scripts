@@ -40,6 +40,13 @@ def download(url, filename): #fancy download
 				sys.stdout.flush()
 	sys.stdout.write('\n')
 
+def apiparse(apiurl):
+	apiurl = apiurl + "?build=407"
+	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"}) # tell the api you're techniclauncher
+	packinfo = urllib.request.urlopen(req).read()
+	pinf = json.loads(packinfo)
+	return pinf
+
 def zipfolder(foldername, target_dir): #def for zipping folders
 	zipobj = zipfile.ZipFile(foldername + '.zip', 'w', zipfile.ZIP_DEFLATED)
 	rootlen = len(target_dir) + 1
@@ -48,31 +55,7 @@ def zipfolder(foldername, target_dir): #def for zipping folders
 			fn = os.path.join(base, file)
 			zipobj.write(fn, fn[rootlen:])
 
-with tempfile.TemporaryDirectory() as tempDir: #create tempdir
-	packDir = os.path.join(tempDir, "modpack")
-	zipDir = os.path.join(tempDir, "zipdir")
-	modpackjar = os.path.join(tempDir, "bin", "Modpack.jar")
-	binDir = os.path.join(zipDir, "bin")
-	pDir = os.path.join(packDir, "modpack")
-	os.makedirs(pDir)
-	os.mkdir(zipDir)
-
-	userurl = input('Enter Pack API URL: ')
-	apiurl = userurl + "?build=407"
-	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.407"}) # tell the api you're techniclauncher
-	packinfo = urllib.request.urlopen(req).read()
-	pinf = json.loads(packinfo)
-	mcver = pinf["minecraft"]
-	if any(ver in mcver for ver in ("1.13.", "1.14.")):
-		print("1.13 and above modpacks using Forge may not work correctly") # a friendly reminder that forge 1.13 and up is not supported in multimc
-	if pinf["solder"] is None:
-		zipurl = pinf["url"]
-		solder = False
-	else:
-		solder = True
-		soapiurl = pinf["solder"]
-
-	if solder: # if pack is solder
+def solderdl(pinf, zipDir)
 		pname = pinf["name"]
 			# connect to solder to find recommended version
 		soinfourl = soapiurl+"modpack/"+pname
@@ -96,6 +79,30 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempdir
 			file = os.path.join(zipDir, filename)
 			print(filename)
 			download(mod, file)
+
+with tempfile.TemporaryDirectory() as tempDir: #create tempdir
+	packDir = os.path.join(tempDir, "modpack")
+	zipDir = os.path.join(tempDir, "zipdir")
+	modpackjar = os.path.join(tempDir, "bin", "Modpack.jar")
+	binDir = os.path.join(zipDir, "bin")
+	pDir = os.path.join(packDir, "modpack")
+	os.makedirs(pDir)
+	os.mkdir(zipDir)
+
+	userurl = input('Enter Pack API URL: ')
+	pinf = apiparse(userurl)
+	mcver = pinf["minecraft"]
+	if any(ver in mcver for ver in ("1.13.", "1.14.")):
+		print("1.13 and above modpacks using Forge may not work correctly") # a friendly reminder that forge 1.13 and up is not supported in multimc
+	if pinf["solder"] is None:
+		zipurl = pinf["url"]
+		solder = False
+	else:
+		solder = True
+		soapiurl = pinf["solder"]
+
+	if solder: # if pack is solder
+		solderdl(pinf, zipDir)
 	
 	else: # else download modpack.zip
 		zname = os.path.join(zipDir, "modpack.zip")
