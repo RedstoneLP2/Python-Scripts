@@ -114,12 +114,12 @@ def detectloader(tempDir):
 		fabric = False
 	return forge, fabric, modpackjar, versionjson
 
-def getforgever(mcver, tempDir):
+def getforgever(versionjson):
 	forgeHeader = versionjson["libraries"][0]["name"]
 	forgeHeader = forgeHeader.replace("net.minecraftforge:forge:", "")
 	forgeHeader = forgeHeader.replace("net.minecraftforge:minecraftforge:", "")
-	forgeHeader = forgeHeader.replace(mcver, "")
-	forgever = forgeHeader.replace("-", "")
+	forgeHeader = forgeHeader.split("-")
+	forgever = forgeHeader[1]
 	return forgever
 
 def createpatchfile(pDir, modpackjar):
@@ -169,7 +169,7 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 	if forge:
 		if any(ver in mcver for ver in ("1.13.", "1.14.")):
 			print("1.13 and above modpacks using Forge may not work correctly") # a friendly reminder that forge 1.13 and up is not supported in multimc
-		forgever = getforgever(mcver, tempDir)
+		forgever = getforgever(versionjson)
 	elif fabric:
 		fabricHeader = versionjson["libraries"][0]["name"]
 		fabricver = fabricHeader.replace("net.fabricmc:fabric-loader:", "")
