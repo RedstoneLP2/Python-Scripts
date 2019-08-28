@@ -23,7 +23,7 @@ def download(url, filename): #fancy download
 	with open(filename, 'wb') as f:
 		response = requests.get(url, stream=True)
 		if response.status_code == 404:
-			print("Error 404 while donwloading: "+ url)
+			print("Error 404 while downloading: "+ url)
 			sys.exit()
 		total = response.headers.get('content-length')
 
