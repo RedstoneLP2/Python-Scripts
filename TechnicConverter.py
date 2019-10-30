@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 '''
 Script to Download and convert Technic launcher modpacks to be more Multimc compatible*
 by RedstoneLP2
@@ -12,6 +11,10 @@ import shutil
 import tempfile
 import json
 import sys
+
+if sys.version_info[0] < 3:
+    raise Exception("Python 3 or a more recent version is required.")
+
 from urllib.parse import urlparse
 
 def files(path):
