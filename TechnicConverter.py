@@ -63,7 +63,9 @@ def solderdl(pinf, zipDir):
 		pname = pinf["name"]
 			# connect to solder to find recommended version
 		soinfourl = soapiurl+"modpack/"+pname
+		print(soinfourl)
 		req = urllib.request.Request(soinfourl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.500"})
+		print(req)
 		sopackinf = urllib.request.urlopen(req).read()
 		sopackinfjson = json.loads(sopackinf)
 		packver = sopackinfjson["recommended"]
@@ -103,6 +105,7 @@ def detectloader(tempDir):
 			print("version.json not found, using modpack.jar as jarmod (may not work correctly)")
 			forge = False
 			fabric = False
+			versionjson = False
 			pass
 	elif os.path.exists(os.path.join(tempDir, "bin", "version.json")):
 		versionjson = json.load(open(os.path.join(tempDir, "bin", "version.json")))
@@ -115,6 +118,8 @@ def detectloader(tempDir):
 	else:
 		forge = False
 		fabric = False
+		versionjson = False
+
 	return forge, fabric, modpackjar, versionjson
 
 def getforgever(versionjson):
