@@ -1,5 +1,5 @@
 '''
-Script to Download and convert Technic launcher modpacks to be more Multimc compatible*
+Script to generate all possible combinations of elements to create an element*
 by RedstoneLP2
 '''
 
