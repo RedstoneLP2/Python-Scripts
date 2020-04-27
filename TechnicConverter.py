@@ -44,8 +44,8 @@ def download(url, filename): #fancy download
 	sys.stdout.write('\n')
 
 def apiparse(apiurl):
-	apiurl = apiurl + "?build=500"
-	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.500"}) # tell the api you're techniclauncher
+	apiurl = apiurl + "?build=510"
+	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.510"}) # tell the api you're techniclauncher
 	if urllib.request.urlopen(req).getcode()==404:
 		print("Error 404 while accessing API. Please check URL")
 		sys.exit()
@@ -67,14 +67,14 @@ def solderdl(pinf, zipDir):
 		pname = pinf["name"]
 			# connect to solder to find recommended version
 		soinfourl = soapiurl+"modpack/"+pname
-		req = urllib.request.Request(soinfourl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.500"})
+		req = urllib.request.Request(soinfourl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.510"})
 		sopackinf = urllib.request.urlopen(req).read()
 		sopackinfjson = json.loads(sopackinf)
 		packver = sopackinfjson["recommended"]
 
 			# connect to solder to get modlist w/ urls
 		sopackurl = soapiurl+"modpack/"+pname+"/"+packver
-		req = urllib.request.Request(sopackurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.500"})
+		req = urllib.request.Request(sopackurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.510"})
 		soinf = urllib.request.urlopen(req).read()
 		painf = json.loads(soinf)
 		mcver = painf["minecraft"]
