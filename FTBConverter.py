@@ -13,7 +13,6 @@ import sys
 import pathlib
 
 apiurl = "https://api.modpacks.ch/public/modpack/"
-fabric = False
 forge = False
 
 if sys.version_info[0] < 3:
@@ -104,8 +103,6 @@ def zipfolder(foldername, target_dir): #def for zipping folders
 			zipobj.write(fn, fn[rootlen:])
 
 with tempfile.TemporaryDirectory() as tempDir: #create tempDir
-# if True:
-# 	tempDir = os.path.join(os.curdir,"test")
 
 	packDir = os.path.join(tempDir, "modpack")
 	pDir = os.path.join(packDir, "modpack")
@@ -117,11 +114,12 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 
 	usersearch = input('Enter Searchterm: ')
 	mappedNames = apisearch(usersearch)[1]
-	
+		
+	print(os.linesep + "ID ---- Name")
 	for pack in mappedNames:
 		print(str(mappedNames[pack]) + " ---- " + pack)
 	
-	userInput = input('Enter Id of Pack: ')
+	userInput = input('Enter ID of Pack: ')
 	
 	for pack in mappedNames:
 		found = False
@@ -135,12 +133,12 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 		sys.exit(1)
 	PackID = userInput
 
-	
+	print(os.linesep + "ID ---- Version ---- Type")
 	for ver in pmeta["versions"]:
 
 		print(str(ver["id"]) + " ---- " + str(ver["name"]) + " ---- " + str(ver["type"]))
 	
-	userInput = input('Enter Id of Pack Version: ')
+	userInput = input('Enter ID of Pack Version: ')
 
 
 	for ver in pmeta["versions"]:
@@ -158,11 +156,6 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 
 	pinf, pmeta = apiparse(PackID,verid)
 	
-	#pinf, pmeta = apiparse("31","32")
-	#pinf, pmeta = apiparse("11","11")
-
-	#print(pinf)
-	
 	for n in pinf["targets"]:
 		if n["name"] == "minecraft":
 			mcver = n["version"]
@@ -177,7 +170,6 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 		zname = pathlib.PurePath(minecraft).joinpath(n["path"]).joinpath(n["name"])
 		pathlib.Path(minecraft).joinpath(n["path"]).mkdir(parents=True,exist_ok=True)
 		
-		print(zname)
 		print(zipurl)
 		download(zipurl, zname)
 		
@@ -192,11 +184,8 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 
 	download(iconUrl, os.path.join(pDir, iconName))
 
-
-	if forge and not fabric:
+	if forge:
 		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"},{"cachedName": "Forge","cachedRequires": [{"equals": "'''+mcver+'''","uid": "net.minecraft"}],"cachedVersion": "'''+forgever+'''","uid": "net.minecraftforge","version": "'''+forgever+'''"}],"formatVersion": 1}'''
-	#elif not forge and fabric:
-	#	mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"},{"cachedName": "Intermediary Mappings","cachedRequires": [{"equals": "'''+mcver+'''","uid": "net.minecraft"}],"cachedVersion": "'''+mcver+'''","cachedVolatile": true,"dependencyOnly": true,"uid": "net.fabricmc.intermediary","version": "'''+mcver+'''"},{"cachedName": "Fabric Loader","cachedRequires": [{"uid": "net.fabricmc.intermediary"}],"cachedVersion": "'''+fabricver+'''","uid": "net.fabricmc.fabric-loader","version": "'''+fabricver+'''"}],"formatVersion": 1}'''
 	else:
 		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"}],"formatVersion": 1}'''
 
