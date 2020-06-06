@@ -44,7 +44,7 @@ def download(url, filename): #fancy download
 	sys.stdout.write('\n')
 
 def apiparse(apiurl):
-	apiurl = apiurl + "?build=600"
+	apiurl = apiurl + "?build=TC" # never thought about using a string here
 	req = urllib.request.Request(apiurl, headers={'User-Agent' : "Mozilla/5.0 (Java) TechnicLauncher/4.600"}) # tell the api you're techniclauncher
 	if urllib.request.urlopen(req).getcode()==404:
 		print("Error 404 while accessing API. Please check URL")
