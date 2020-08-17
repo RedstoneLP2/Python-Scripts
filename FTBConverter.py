@@ -1,7 +1,9 @@
-'''
-Script to Download and convert FTB launcher modpacks to a multimc compatible* format
-by RedstoneLP2
-'''
+#==================================================#
+#    Script to Download and convert FTB launcher   #
+#     modpacks to a multimc compatible* format     #
+#            by RedstoneLP2                        #
+#==================================================#
+
 
 import zipfile
 import urllib.request
@@ -11,6 +13,7 @@ import tempfile
 import json
 import sys
 import pathlib
+
 
 apiurl = "https://api.modpacks.ch/public/modpack/"
 forge = False
@@ -193,7 +196,7 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 	MCLaunchMethod=LauncherPart
 	name='''+pmeta["name"]+'''
 	notes='''+pmeta["description"]+'''
-	iconKey=""'''+iconName.replace(".png", "")
+	iconKey='''+iconName.replace(".png", "")
 
 
 	mmcJson = json.loads(mmcData)

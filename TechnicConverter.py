@@ -1,7 +1,8 @@
-'''
-Script to Download and convert Technic launcher modpacks to a Multimc compatible* format
-by RedstoneLP2
-'''
+#===============================================================#
+#    Script to Download and convert Technic launcher modpacks   #
+#            to a Multimc compatible* format                    #
+#                by RedstoneLP2                                 #
+#===============================================================#
 
 import zipfile
 import urllib.request
@@ -163,6 +164,7 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 	if pinf["solder"] is None:
 		zipurl = pinf["url"]
 		zname = os.path.join(zipDir, "modpack.zip")
+		print("Downloading Modpack")
 		download(zipurl, zname)
 	else:
 		solderdl(pinf, zipDir)
