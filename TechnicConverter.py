@@ -88,6 +88,7 @@ def solderdl(pinf, zipDir):
 			file = os.path.join(zipDir, filename)
 			print(filename)
 			download(mod, file)
+		return(mcver)
 
 def detectloader(tempDir):
 	modpackjar = os.path.join(tempDir, "bin", "Modpack.jar")
@@ -167,7 +168,7 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 		print("Downloading Modpack")
 		download(zipurl, zname)
 	else:
-		solderdl(pinf, zipDir)
+		mcver = solderdl(pinf, zipDir)
 
 	for file in files(zipDir): # extract all files and delete them
 		filepath = os.path.join(zipDir, file)
@@ -179,8 +180,10 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 
 
 	if forge:
-		if any(ver in mcver for ver in ("1.13.", "1.14.")):
-			print("1.13 and above modpacks using Forge may not work correctly") # a friendly reminder that forge 1.13 and up is not supported in multimc
+		## Forge 1.13+ should work fine in multimc now
+
+		# if any(ver in mcver for ver in ("1.13.", "1.14.")): 
+		# 	print("1.13 and above modpacks using Forge may not work correctly") # a friendly reminder that forge 1.13 and up is not supported in multimc
 		forgever = getforgever(versionjson)
 	elif fabric:
 		fabricHeader = versionjson["libraries"][0]["name"]
