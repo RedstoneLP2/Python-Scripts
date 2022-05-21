@@ -11,7 +11,6 @@ import requests
 import tempfile
 import json
 import sys
-import pathlib
 import hashlib
 import shutil
 
@@ -81,23 +80,27 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 	elif "fabric" in pinf["modLoader"].lower():
 		fabric = True
 		loaderver = pinf["modLoader"].split("-")[3]
-
+	
+	print("Copying files")
 	shutil.copytree(packpath,minecraft)
 
+	print("Downloading artwork")
 	artUrl=pinf["artUrl"]
 	iconFileName=os.path.join(pDir,artUrl[artUrl.rfind("/")+1:].split("?", 1)[0])
 	download(artUrl,iconFileName)
-	
 	iconName=md5(iconFileName)+"."+iconFileName.split(".")[-1]
 	os.rename(iconFileName, os.path.join(pDir,iconName))
 	print(iconName)
 
+
+	print("Generating mmc-pack.json")
+	mmcData = {"components": [{"cachedName": "Minecraft", "cachedRequires": [], "cachedVersion": mcver, "important": True, "uid": "net.minecraft", "version": mcver}], "formatVersion": 1}
 	if forge:
-		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"},{"cachedName": "Forge","cachedRequires": [{"equals": "'''+mcver+'''","uid": "net.minecraft"}],"cachedVersion": "'''+loaderver+'''","uid": "net.minecraftforge","version": "'''+loaderver+'''"}],"formatVersion": 1}'''
+	    mmcData["components"].append({"cachedName": "Forge","cachedRequires": [{"equals": mcver, "uid": "net.minecraft"}]})
 	elif fabric:
-		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"},{"cachedName": "Intermediary Mappings","cachedRequires": [{"equals": "'''+mcver+'''","uid": "net.minecraft"}],"cachedVersion": "'''+mcver+'''","cachedVolatile": true,"DependencyOnly": true,"uid": "net.fabricmc.intermediary","version": "'''+mcver+'''"},{"cachedName": "Fabric Loader","cachedRequires": [{"uid": "net.fabricmc.intermediary"}],"cachedVersion": "'''+loaderver+'''","uid": "net.fabricmc.fabric-loader","version": "'''+loaderver+'''"}],"formatVersion": 1}'''
-	else:
-		mmcData = '''{"components": [{"cachedName": "Minecraft","cachedRequires": [],"cachedVersion": "'''+mcver+'''","important": true,"uid": "net.minecraft","version": "'''+mcver+'''"}],"formatVersion": 1}'''
+	    mmcData["components"].append({"cachedName": "Intermediary Mappings", "cachedRequires": [{"equals": mcver, "uid": "net.minecraft"}], "cachedVersion": mcver, "cachedVolatile": True, "DependencyOnly": True, "uid": "net.fabricmc.intermediary", "version": mcver})
+	    mmcData["components"].append({"cachedName": "Fabric Loader", "cachedRequires": [{"uid": "net.fabricmc.intermediary"}], "cachedVersion": loaderver, "uid": "net.fabricmc.fabric-loader", "version": loaderver})
+
 
 	instancecfg = '''InstanceType=OneSix
 	MCLaunchMethod=LauncherPart
@@ -106,7 +109,7 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 	iconKey='''+iconName.replace(".png", "")
 
 
-	mmcJson = json.loads(mmcData)
+	mmcJson = mmcData #json.loads(mmcData)
 
 	with open(mmcFile, "w") as mcJson: # dump mmcjson in mmc-pack.json
 		json.dump(mmcJson, mcJson)
@@ -115,5 +118,6 @@ with tempfile.TemporaryDirectory() as tempDir: #create tempDir
 		instanceFile.write(instancecfg)
 		instanceFile.close()
 	outputFileName=pinf["name"].replace(" ", "_").replace("/", "").replace("\\", "")+"-"+pinf["version"]
+	print("Zipping up")
 	zipfolder(outputFileName, packDir) # zip everything up
 	print("Output File: "+outputFileName+".zip")
