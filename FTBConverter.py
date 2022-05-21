@@ -1,5 +1,5 @@
 #==================================================#
-#    Script to Download and convert FTB launcher   #
+#    	  Script to convert FTB launcher   		   #
 #     modpacks to a multimc compatible* format     #
 #            by RedstoneLP2                        #
 #==================================================#
